@@ -9,6 +9,8 @@ import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { HealthModule } from './health/health.module';
 import { ItemModule } from './item/item.module';
 import { DistributionCenterModule } from './distribution-center/distribution-center.module';
+import { AvailabilityModule } from './availability/availability.module';
+import { OrderModule } from './order/order.module';
 
 @Module({
   imports: [
@@ -40,6 +42,8 @@ import { DistributionCenterModule } from './distribution-center/distribution-cen
     HealthModule,
     ItemModule,
     DistributionCenterModule,
+    AvailabilityModule,
+    OrderModule,
   ],
 })
 export class AppModule implements NestModule {

@@ -45,7 +45,7 @@ Each phase produces working, runnable code. Tradeoffs are not discussed upfront 
 
 ---
 
-## Phase 3 — Availability Service (Read Path) 🔄 `IN PROGRESS`
+## Phase 3 — Availability Service (Read Path) ✅ `DONE`
 
 **What you build:** The `GET /v1/availability` endpoint — given a user location, return items available for delivery within 1 hour.
 
@@ -65,7 +65,7 @@ Each phase produces working, runnable code. Tradeoffs are not discussed upfront 
 
 ---
 
-## Phase 4 — Order Service (Write Path & Consistency)
+## Phase 4 — Order Service (Write Path & Consistency) ✅ `DONE`
 
 **What you build:** `POST /v1/orders` — place a multi-item order atomically, preventing double-booking.
 
