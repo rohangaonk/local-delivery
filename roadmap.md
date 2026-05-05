@@ -7,43 +7,45 @@ Each phase produces working, runnable code. Tradeoffs are not discussed upfront 
 
 ---
 
-## Phase 1 — Project Scaffold & Configuration
+## Phase 1 — Project Scaffold & Configuration ✅ `DONE`
 
 **What you build:** A running NestJS monolith with environment-aware config, database connection, and health check.
 
 ### Steps
-1. Bootstrap NestJS project (`nest new local-delivery-service`)
-2. Set up `ConfigModule` with `.env` validation (use `@nestjs/config` + `joi`)
-3. Integrate TypeORM (or Prisma — pick one, commit to it)
-4. Connect to a local PostgreSQL instance via Docker Compose
-5. Add a `GET /health` endpoint that returns DB connectivity status
-6. Set up a basic request logger middleware
+1. ✅ Bootstrap NestJS project (`nest new local-delivery-service`)
+2. ✅ Set up `ConfigModule` with `.env` validation (use `@nestjs/config` + `joi`)
+3. ✅ Integrate TypeORM
+4. ✅ Connect to a local PostgreSQL instance via Docker Compose (port 5433 — system Postgres occupies 5432)
+5. ✅ Add a `GET /health` endpoint that returns DB connectivity status
+6. ✅ Set up a basic request logger middleware
 
-### Decision Points You'll Hit
-- **TypeORM vs Prisma** — TypeORM feels like NestJS-native; Prisma has better type safety and migration tooling. Pick here and feel the consequences later.
-- **Monolith vs modular monolith** — Start as a monolith. You'll feel the pressure to split in Phase 4.
+### Decisions Made
+- **TypeORM chosen** over Prisma. Will feel the migration tooling difference in Phase 2.
+- **Monolith** — starting flat, pressure to split will come in Phase 4.
+- **Port 5433 for Docker Postgres** — avoids conflict with system-level Postgres on 5432.
 
 ---
 
-## Phase 2 — Core Domain: Entities & Migrations
+## Phase 2 — Core Domain: Entities & Migrations ✅ `DONE`
 
-**What you build:** Database schema with migrations and typed TypeORM/Prisma entities for all core domain objects.
+**What you build:** Database schema with migrations and typed TypeORM entities for all core domain objects.
 
 ### Steps
-1. Create entities: `Item`, `Inventory`, `DistributionCenter`, `Order`, `OrderItem`
-2. Write and run the initial migration
-3. Seed the database with sample data (10 DCs, 50 items, varied inventory levels)
-4. Expose basic CRUD for `Item` and `DistributionCenter` (admin use only, no auth needed yet)
-5. Write unit tests for entity relationships
+1. ✅ Create entities: `Item`, `Inventory`, `DistributionCenter`, `Order`, `OrderItem`
+2. ✅ Write and run the initial migration (`InitialSchema1777953810754`)
+3. ✅ Seed the database with sample data (10 DCs, 50 items, 500 inventory records, varied stock levels)
+4. ✅ Expose basic CRUD for `Item` (`/admin/items`) and `DistributionCenter` (`/admin/distribution-centers`)
+5. ✅ Write unit tests for service layer (10/10 passing)
 
-### Schema Decisions You'll Face
-- **`Item` vs `Inventory` separation** — Item is the catalog (what a customer sees). Inventory is physical stock at a DC. You'll be tempted to merge them. Don't — feel why they're separate when you implement availability.
-- **`availableCount` vs `lockedCount` on Inventory** — You need both to handle in-flight orders. This will matter in Phase 4.
-- **Storing `lat/long` on DC** — Plain `float` columns now, PostGIS extension later (Phase 5 deep dive).
+### Decisions Made
+- **`@faker-js/faker` pinned to v8** — v9+ is pure ESM, incompatible with ts-node CJS mode without extra config.
+- **`TRUNCATE ... CASCADE`** for idempotent seeding — FK constraints prevent individual table truncation.
+- **Global `ValidationPipe`** with `whitelist: true`, `forbidNonWhitelisted: true` — unknown fields in request bodies throw 400 instead of being silently dropped.
+- **Price stored in paise (integer)** — avoids floating-point rounding errors in financial calculations.
 
 ---
 
-## Phase 3 — Availability Service (Read Path)
+## Phase 3 — Availability Service (Read Path) 🔄 `IN PROGRESS`
 
 **What you build:** The `GET /v1/availability` endpoint — given a user location, return items available for delivery within 1 hour.
 

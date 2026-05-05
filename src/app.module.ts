@@ -7,6 +7,8 @@ import { validationSchema } from './config/env.validation';
 import { databaseConfig } from './config/database.config';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { HealthModule } from './health/health.module';
+import { ItemModule } from './item/item.module';
+import { DistributionCenterModule } from './distribution-center/distribution-center.module';
 
 @Module({
   imports: [
@@ -36,6 +38,8 @@ import { HealthModule } from './health/health.module';
 
     // --- Feature Modules -------------------------------------------------
     HealthModule,
+    ItemModule,
+    DistributionCenterModule,
   ],
 })
 export class AppModule implements NestModule {
