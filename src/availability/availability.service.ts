@@ -26,9 +26,9 @@ export class AvailabilityService {
      * Step 1: Find DCs within delivery range (default 10km).
      * This keeps our inventory search space small.
      */
-    const dcIds = await this.nearbyService.findNearbyDcIds(lat, long);
+    const nearbyDcs = await this.nearbyService.findNearbyDcIds(lat, long);
 
-    if (dcIds.length === 0) {
+    if (nearbyDcs.length === 0) {
       return {
         data: [],
         meta: { nextCursor: null, hasNextPage: false },
@@ -41,7 +41,12 @@ export class AvailabilityService {
      * We use a single query with an IN clause to avoid N+1.
      * We join with Item to get metadata (name, price).
      * We use cursor-based pagination (item.id > :cursor) for stable results.
+     * We include regionId in the WHERE clause so Postgres only scans 
+     * the necessary partitions.
      */
+    const dcIds = nearbyDcs.map((dc) => dc.id);
+    const regionIds = [...new Set(nearbyDcs.map((dc) => dc.regionId))];
+
     const queryBuilder = this.inventoryRepository
       .createQueryBuilder('inventory')
       .innerJoin('inventory.item', 'item')
@@ -49,7 +54,8 @@ export class AvailabilityService {
       .addSelect('item.name', 'name')
       .addSelect('item.priceInPaise', 'priceInPaise')
       .addSelect('SUM(inventory.availableCount)', 'totalQuantity')
-      .where('inventory.distributionCenterId IN (:...dcIds)', { dcIds })
+      .where('inventory.regionId IN (:...regionIds)', { regionIds })
+      .andWhere('inventory.distributionCenterId IN (:...dcIds)', { dcIds })
       .andWhere('item.isActive = :isActive', { isActive: true })
       .groupBy('item.id')
       .addGroupBy('item.name')

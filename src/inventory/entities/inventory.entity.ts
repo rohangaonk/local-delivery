@@ -44,6 +44,9 @@ export class Inventory {
   @Column()
   distributionCenterId: string;
 
+  @Column({ type: 'int', default: 1 })
+  regionId: number;
+
   @Column({ type: 'int', default: 0 })
   availableCount: number;
 

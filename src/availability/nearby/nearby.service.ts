@@ -21,7 +21,7 @@ export class NearbyService {
     lat: number,
     lon: number,
     radiusKm: number = 10,
-  ): Promise<string[]> {
+  ): Promise<Array<{ id: string; regionId: number }>> {
     /**
      * Haversine formula in pure SQL.
      * 6371 is the Earth's radius in KM.
@@ -31,8 +31,8 @@ export class NearbyService {
      * in the database.
      */
     const query = `
-      SELECT id FROM (
-        SELECT id, (
+      SELECT id, "regionId" FROM (
+        SELECT id, "regionId", (
           6371 * acos(
             least(1, 
               cos(radians($1)) * cos(radians(latitude)) * 
@@ -51,6 +51,9 @@ export class NearbyService {
     // Using repository.query for raw SQL access
     const results = await this.dcRepository.query(query, [lat, lon, radiusKm]);
 
-    return results.map((r: { id: string }) => r.id);
+    return results.map((r: { id: string; regionId: number }) => ({
+      id: r.id,
+      regionId: r.regionId,
+    }));
   }
 }

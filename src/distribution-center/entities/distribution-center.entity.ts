@@ -33,6 +33,9 @@ export class DistributionCenter {
   @Column({ default: true })
   isActive: boolean;
 
+  @Column({ type: 'int', default: 1 })
+  regionId: number;
+
   @OneToMany(() => Inventory, (inventory) => inventory.distributionCenter)
   inventories: Inventory[];
 

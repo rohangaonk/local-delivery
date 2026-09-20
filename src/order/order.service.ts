@@ -16,13 +16,13 @@ export class OrderService {
   ) {}
 
   async createOrder(dto: CreateOrderDto, retries = 3): Promise<Order> {
-    const nearbyDcIds = await this.nearbyService.findNearbyDcIds(dto.lat, dto.long);
-    if (!nearbyDcIds.length) {
+    const nearbyDcs = await this.nearbyService.findNearbyDcIds(dto.lat, dto.long);
+    if (!nearbyDcs.length) {
       throw new BadRequestException('No distribution centers nearby');
     }
 
     try {
-      return await this.executeOrderTransaction(dto, nearbyDcIds);
+      return await this.executeOrderTransaction(dto, nearbyDcs);
     } catch (error: any) {
       if (error.code === '40001' && retries > 0) {
         // Retry on serialization failure
@@ -32,7 +32,7 @@ export class OrderService {
     }
   }
 
-  private async executeOrderTransaction(dto: CreateOrderDto, nearbyDcIds: string[]): Promise<Order> {
+  private async executeOrderTransaction(dto: CreateOrderDto, nearbyDcs: Array<{ id: string, regionId: number }>): Promise<Order> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction('SERIALIZABLE');
@@ -54,12 +54,13 @@ export class OrderService {
         }
 
         // Try to fulfill from the closest DC that has enough stock
-        for (const dcId of nearbyDcIds) {
+        for (const dc of nearbyDcs) {
           // Find inventory record
           const inventory = await queryRunner.manager.findOne(Inventory, {
             where: {
               itemId: itemDto.itemId,
-              distributionCenterId: dcId,
+              distributionCenterId: dc.id,
+              regionId: dc.regionId,
             },
             lock: { mode: 'pessimistic_write' },
           });
@@ -73,7 +74,7 @@ export class OrderService {
 
             const orderItem = new OrderItem();
             orderItem.itemId = itemDto.itemId;
-            orderItem.fulfilledById = dcId;
+            orderItem.fulfilledById = dc.id;
             orderItem.quantity = itemDto.quantity;
             orderItem.unitPriceInPaise = item.priceInPaise;
             

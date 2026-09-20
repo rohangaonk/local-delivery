@@ -76,6 +76,7 @@ async function seed() {
     latitude: randomLat(),
     longitude: randomLng(),
     isActive: true,
+    regionId: faker.helpers.arrayElement([1, 2, 3]),
   }));
 
   const dcs = await dcRepo.save(dcData);
@@ -102,6 +103,7 @@ async function seed() {
       inventoryData.push({
         itemId: item.id,
         distributionCenterId: dc.id,
+        regionId: dc.regionId,
         availableCount: available,
         lockedCount: locked,
       });

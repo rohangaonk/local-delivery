@@ -89,21 +89,22 @@ Each phase produces working, runnable code. Tradeoffs are not discussed upfront 
 
 ---
 
-## Phase 5 — Read Scalability: Caching with Redis
+## Phase 5 — Read Scalability: DB Partitioning & Read Replicas
 
-**What you build:** A Redis caching layer on the availability read path to handle the estimated ~20k RPS.
+**What you build:** Replace the Redis caching idea with a scalable database architecture using Postgres Table Partitioning by region, paired with simulated Read Replicas to handle high read throughput.
 
 ### Steps
-1. Add Redis via `@nestjs/cache-manager` with `cache-manager-redis-store`
-2. Cache availability query results keyed by `(regionId, page)` with a 60-second TTL
-3. On order completion, publish an inventory-change event and invalidate affected cache keys
-4. Add cache hit/miss metrics via a custom interceptor (log to console for now)
-5. Run a local load test (e.g., `autocannon` or `k6`) against the endpoint — observe before/after RPS
+1. ✅ Add a `regionId` column to `DistributionCenter` (e.g., representing a zip code prefix) and seed it.
+2. ✅ Convert the `Inventory` table to a Postgres LIST-partitioned table based on `regionId` (requires a data migration).
+3. ✅ Update `NearbyService` to return `regionId`s alongside DC IDs, so queries can be targeted to specific partitions.
+4. Set up a simulated Read Replica in NestJS (using TypeORM replication config) and route the `GET /v1/availability` endpoint to read from it.
+5. Ensure the `POST /v1/orders` endpoint exclusively reads and writes to the primary (Leader) database to maintain strong consistency.
+6. Run a local load test to benchmark partitioned read performance.
 
 ### Tradeoffs You'll Experience
-- **Cache key granularity** — Caching by `(lat, long)` is too fine-grained (near-zero hit rate). Caching by `regionId` is coarser but effective. You'll tune this.
-- **Cache invalidation timing** — If you invalidate synchronously inside the order transaction, you slow down writes. If you do it async after commit, there's a small window of stale data. You'll decide which is acceptable.
-- **TTL vs event-driven invalidation** — TTL is simple but can show stale stock for up to 60 seconds. Event-driven is accurate but adds complexity. You'll implement both and compare.
+- **Partition sizing** — Unevenly populated regions can lead to "hot" partitions, whereas a pure cache might distribute load differently.
+- **Migration complexity** — Converting an existing table to a partitioned table in Postgres requires creating a new table and migrating data, unlike just spinning up a Redis instance.
+- **Read replica lag** — By routing availability queries to a replica, you are explicitly accepting eventual consistency (slight staleness) on reads as an architectural policy, instead of dealing with cache invalidation logic.
 
 ---
 
@@ -172,7 +173,7 @@ Phase 1 → Running app, config, DB connected
 Phase 2 → Domain schema, seed data
 Phase 3 → Availability read path (naive geo)
 Phase 4 → Order write path (strong consistency)  ← First major tradeoff gauntlet
-Phase 5 → Redis caching on reads               ← Caching tradeoffs
+Phase 5 → DB Partitioning & Read Replicas       ← Scaling relational DBs
 Phase 6 → Production geo with PostGIS           ← Geo deep dive
 Phase 7 → Real-time tracking via WebSockets     ← Stateful connection tradeoffs
 Phase 8 → Horizontal scale + observability      ← Everything breaks, you fix it
